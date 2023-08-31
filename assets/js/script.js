@@ -1,38 +1,38 @@
 const urlBase = "https://mindicador.cl/api";
-const inputPesos = document.getElementById('input-pesos');
-const selectMoneda = document.getElementById('select-moneda');
-const btnBuscar = document.getElementById('btn');
-const resultadoSpan = document.getElementById('resultado-span');
+const selectMoneda = document.getElementById("select-moneda");
+const inputPesos = document.getElementById("input-pesos");
+const btn = document.getElementById("btn");
+const resultadoSpan = document.getElementById("resultado-span");
+const graficoCanvas = document.getElementById("grafico");
 
-async function obtenerTiposDeCambio() {
+// Función para obtener los tipos de cambio desde mindicador.cl
+const obtenerTiposDeCambio = async () => {
   try {
-    const response = await fetch(`${urlBase}`);
+    const response = await fetch(urlBase);
+    if (!response.ok) {
+      throw new Error("Error al obtener tipos de cambio");
+    }
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error al obtener los tipos de cambio:', error);
-    throw error;
+    throw new Error("Error al obtener tipos de cambio: " + error.message);
   }
-}
-
-btnBuscar.addEventListener('click', async () => {
-  const cantidadPesos = parseFloat(inputPesos.value);
-  const monedaSeleccionada = selectMoneda.value;
-
-  try {
-    const tiposDeCambio = await obtenerTiposDeCambio();
-
-    if (!tiposDeCambio[monedaSeleccionada]) {
-      throw new Error('Moneda seleccionada no encontrada.');
-    }
-
-    const valorMoneda = tiposDeCambio[monedaSeleccionada].valor;
-    const conversion = cantidadPesos / valorMoneda;
-
-    resultadoSpan.textContent = conversion.toFixed(2);
-
-  } catch (error) {
-    console.error('Error al realizar la conversión:', error);
-    resultadoSpan.textContent = 'Error al realizar la conversión';
-  }
+};
+// Función para calcular el cambio y mostrarlo en el DOM
+const calcularCambio = (tipoMoneda, montoCLP) => {
+  const tiposDeCambio = obtenerTiposDeCambio();
+  tiposDeCambio.then(data => {
+    const tipoCambio = data[tipoMoneda].valor;
+    const resultado = montoCLP / tipoCambio;
+    resultadoSpan.textContent = resultado.toFixed(2);
+  }).catch(error => {
+    resultadoSpan.textContent = "Error en el cálculo";
+    console.error(error.message);
+  });
+};
+// Agregar evento click al botón
+btn.addEventListener("click", () => {
+  const tipoMoneda = selectMoneda.value;
+  const montoCLP = parseFloat(inputPesos.value);
+  calcularCambio(tipoMoneda, montoCLP);
 });
