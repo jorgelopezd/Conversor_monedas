@@ -1,49 +1,72 @@
-//se declara la varialbe fuera del evento para que al momento de cargar la pagina este disponble en la funcion obetenertipodecambio
-const urlBase = "https://mindicador.cl/api";
-
 document.addEventListener("DOMContentLoaded", () => {
+  const urlBase = "https://mindicador.cl/api";
   const inputPesos = document.getElementById("input-pesos");
   const selectMoneda = document.getElementById("select-moneda");
   const resultadoSpan = document.getElementById("resultado-span");
-  const btn = document.getElementById("btn");
-  const tiposDeCambio = {};
+  const graficoCanvas = document.getElementById("grafico");
 
-  //funcion asincronica tipo de cambio
+  // Función para obtener los tipos de cambio desde mindicador.cl
   async function obtenerTiposDeCambio() {
     try {
-      const response = await fetch(`${urlBase}`);
+      const response = await fetch(urlBase);
+      if (!response.ok) {
+        throw new Error("Error al obtener tipos de cambio");
+      }
       const data = await response.json();
-
-      tiposDeCambio.dolar = data.dolar.valor;
-      tiposDeCambio.uf = data.uf.valor;
+      return data;
     } catch (error) {
-      console.error("Error al obtener tipos de cambio:", error);
-      resultadoSpan.textContent = "Error al obtener tipos de cambio";
+      throw new Error("Error al obtener tipos de cambio: " + error.message);
     }
   }
 
-  //evento con validaciones y realiza calculos con el tipo de moneda selecionado
-  btn.addEventListener("click", () => {
+  // Función para calcular el cambio y mostrarlo en el DOM
+  function calcularCambio(tipoMoneda, montoCLP) {
+    obtenerTiposDeCambio()
+      .then((data) => {
+        const tipoCambio = data[tipoMoneda].valor;
+        const resultado = montoCLP / tipoCambio;
+        resultadoSpan.textContent = resultado.toFixed(2);
+      })
+      .catch((error) => {
+        resultadoSpan.textContent = "Error en el cálculo";
+        console.error(error.message);
+      });
+  }
+
+  // Agregar evento click al botón
+  document.getElementById("btn").addEventListener("click", () => {
+    const tipoMoneda = selectMoneda.value;
     const montoCLP = parseFloat(inputPesos.value);
-    const monedaSeleccionada = selectMoneda.value;
-
-    if (isNaN(montoCLP) || montoCLP <= 0) {
-      resultadoSpan.textContent = "Ingrese un monto válido";
-      return;
-    }
-
-    if (monedaSeleccionada === "dolar") {
-      const montoUSD = montoCLP / tiposDeCambio.dolar;
-      resultadoSpan.textContent = montoUSD.toFixed(2) + " USD";
-    } else if (monedaSeleccionada === "uf") {
-      const montoUF = montoCLP / tiposDeCambio.uf;
-      resultadoSpan.textContent = montoUF.toFixed(2) + " UF";
-    } else {
-      resultadoSpan.textContent = "Seleccione una moneda válida";
-    }
+    calcularCambio(tipoMoneda, montoCLP);
   });
 
+  // Configurar el gráfico
+  const ctx = graficoCanvas.getContext("2d");
+
+  // Crear un nuevo gráfico de línea
+  const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [""], 
+      datasets: [
+        {
+          label: "Valor en Pesos CLP",
+          data: [""],
+          borderColor: "rgba(75, 192, 192, 1)",
+          borderWidth: 2,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+
+  
   obtenerTiposDeCambio();
 });
-
-//grafico
